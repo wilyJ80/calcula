@@ -1,330 +1,307 @@
-#include <stdio.h> 
+#include "analex.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <stdlib.h> 
+#define TAM_LEXEMA 50
+#define TAM_NUM 20
 
-#include <ctype.h> 
+void error(char msg[]) {
+  printf("%s\n", msg);
+  exit(1);
+}
 
-#include <string.h> 
+TOKEN AnaLex(FILE *fd) {
 
-#include <stdbool.h> 
+  int estado;
+  char lexema[TAM_LEXEMA] = "";
+  int tamL = 0;
+  char digitos[TAM_NUM] = "";
+  int tamD = 0;
+  TOKEN t;
+  estado = 0;
 
-#include "analex.h" 
+  while (true) {
 
-#define TAM_LEXEMA 50 
+    char c = fgetc(fd);
 
-#define TAM_NUM 20 
+    switch (estado) {
 
- 
+    case 0:
+      if (c == ' ' || c == '\t')
+        estado = 0;
 
-void error(char msg[]) { 
+      else if (c >= 'a' &&
+               c <= 'z') { // inicio de identificador - inicializa lexema
 
-printf("%s\n", msg); 
+        estado = 1;
 
-exit(1); 
+        lexema[tamL] = c;
 
-} 
+        lexema[++tamL] = '\0';
 
- 
+      }
 
-TOKEN AnaLex(FILE *fd) { 
+      else if (c >= '1' &&
+               c <= '9') { // inicio de constante inteira - inicializa digitos
 
+        estado = 10;
 
-int estado; 
+        digitos[tamD] = c;
 
-char lexema[TAM_LEXEMA] = ""; 
+        digitos[++tamD] = '\0';
 
-int tamL = 0; 
+      }
 
-char digitos[TAM_NUM] = ""; 
+      else if (c == '+') { // sinal de adicao - monta e devolve token
 
-int tamD = 0; 
+        estado = 3;
 
+        t.cat = SN;
 
-TOKEN t; 
+        t.codigo = ADICAO;
 
-estado = 0; 
+        return t;
 
-while (true) { 
+      }
 
-char c = fgetc(fd); 
+      else if (c == '-') { // sinal de subtracao - monta e devolve token
 
-switch (estado) { 
+        estado = 4;
 
-case 0: 
-if (c == ' ' || c == '\t') estado = 0; 
+        t.cat = SN;
 
-else if (c >= 'a' && c <= 'z') { // inicio de identificador - inicializa lexema 
+        t.codigo = SUBTRACAO;
 
-estado = 1; 
+        return t;
 
-lexema[tamL] = c; 
+      }
 
-lexema[++tamL] = '\0'; 
+      else if (c == '*') { // sinal de multiplicacao - monta e devolve token
 
-} 
+        estado = 6;
 
-else if (c >= '1' && c <= '9') { // inicio de constante inteira - inicializa digitos 
+        t.cat = SN;
 
-estado = 10; 
+        t.codigo = MULTIPLIC;
 
-digitos[tamD] = c;  
+        return t;
 
-digitos[++tamD] = '\0'; 
+      }
 
-} 
+      else if (c == '/') { // sinal de divisao - monta e devolve token
 
-else if (c == '+') { // sinal de adicao - monta e devolve token 
+        estado = 5;
 
-estado = 3; 
+        t.cat = SN;
 
-t.cat = SN; 
+        t.codigo = DIVISAO;
 
-t.codigo = ADICAO; 
+        return t;
 
-return t; 
+      }
 
-} 
+      else if (c == '=') { // sinal de atribuicao - monta e devolve token
 
-else if (c == '-') { // sinal de subtracao - monta e devolve token 
+        estado = 7;
 
-estado = 4; 
+        t.cat = SN;
 
-t.cat = SN; 
+        t.codigo = ATRIB;
 
-t.codigo = SUBTRACAO; 
+        return t;
 
-return t; 
+      }
 
-} 
+      else if (c == '(') { // sinal de abre parenteses - monta e devolve token
 
-else if (c == '*') { // sinal de multiplicacao - monta e devolve token 
+        estado = 8;
 
-estado = 6; 
+        t.cat = SN;
 
-t.cat = SN; 
+        t.codigo = ABRE_PAR;
 
-t.codigo = MULTIPLIC; 
+        return t;
 
-return t; 
+      }
 
-} 
+      else if (c == ')') { // sinal de fecha parenteses - monta e devolve token
 
-else if (c == '/') { // sinal de divisao - monta e devolve token 
+        estado = 9;
 
-estado = 5; 
+        t.cat = SN;
 
-t.cat = SN; 
+        t.codigo = FECHA_PAR;
 
-t.codigo = DIVISAO; 
+        return t;
 
-return t; 
+      }
 
-} 
+      else if (c == '\n') {
 
-else if (c == '=') { // sinal de atribuicao - monta e devolve token 
+        estado = 0;
 
-estado = 7; 
+        t.cat = FIM_EXPR; // fim de linha (ou expressao) encontrado
 
-t.cat = SN; 
+        contLinha++;
 
-t.codigo = ATRIB; 
+        return t;
 
-return t; 
+      }
 
-} 
+      else if (c == EOF) { // fim do arquivo fonte encontrado
 
-else if (c == '(') { // sinal de abre parenteses - monta e devolve token 
+        t.cat = FIM_ARQ;
 
-estado = 8; 
+        return t;
 
-t.cat = SN; 
+      }
 
-t.codigo = ABRE_PAR; 
+      else
 
-return t; 
+        error("Caracter invalido na expressao!"); // sem transicao valida no AFD
 
-} 
+      break;
 
-else if (c == ')') { // sinal de fecha parenteses - monta e devolve token 
+    case 1:
+      if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
 
-estado = 9; 
+        estado = 1;
 
-t.cat = SN; 
+        lexema[tamL] = c; // acumula caracteres lidos em lexema
 
-t.codigo = FECHA_PAR; 
+        lexema[++tamL] = '\0';
 
-return t; 
+      }
 
-} 
+      else { // transicao OUTRO* do estado 1 do AFD
 
-else if (c == '\n') { 
+        estado = 2; // monta token identificador e retorna
 
-estado = 0; 
+        ungetc(c, fd);
 
-t.cat = FIM_EXPR;   // fim de linha (ou expressao) encontrado 
+        t.cat = ID;
 
-contLinha++; 
+        strcpy(t.lexema, lexema);
 
-return t; 
+        return t;
+      }
 
-} 
+      break;
 
-else if (c == EOF) { // fim do arquivo fonte encontrado 
+    case 10:
+      if (c >= '0' && c <= '9') {
 
-t.cat = FIM_ARQ; 
+        estado = 10;
 
-return t; 
+        digitos[tamD] = c; // acumula digitos lidos na variaavel digitos
 
-} 
+        digitos[++tamD] = '\0';
 
-else 
+      }
 
-error("Caracter invalido na expressao!");// sem transicao valida no AFD 
+      else { // transicao OUTRO* do estado 10 do AFD
 
-break; 
+        estado = 11; // monta token constante inteira e retorna
 
-case 1: 
-if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) { 
+        ungetc(c, fd);
 
-estado = 1; 
+        t.cat = CT_I;
 
-lexema[tamL] = c; // acumula caracteres lidos em lexema 
+        t.valInt = atoi(digitos);
 
-lexema[++tamL] = '\0'; 
+        return t;
+      }
+    }
+  }
+}
 
-} 
+int main() {
 
-else {// transicao OUTRO* do estado 1 do AFD 
+  FILE *fd;
 
-estado = 2;// monta token identificador e retorna 
+  TOKEN tk;
 
-ungetc(c, fd); 
+  if ((fd = fopen("expressao.dat", "r")) == NULL)
 
-t.cat = ID; 
+    error("Arquivo de entrada da expressao nao encontrado!");
 
-strcpy(t.lexema, lexema); 
+  printf("LINHA %d: ", contLinha);
 
-return t; 
+  while (1) { // laço infinito para processar a expressão até o fim de arquivo
 
-} 
+    tk = AnaLex(fd);
 
-break; 
+    switch (tk.cat) {
 
-case 10:
-if (c >= '0' && c <= '9') { 
+    case ID:
+      printf("<ID, %s> ", tk.lexema);
 
-estado = 10; 
+      break;
 
-digitos[tamD] = c; // acumula digitos lidos na variaavel digitos 
+    case SN:
+      switch (tk.codigo) {
 
-digitos[++tamD] = '\0'; 
+      case ADICAO:
+        printf("<SN, ADICAO> ");
 
-} 
+        break;
 
-else { // transicao OUTRO* do estado 10 do AFD 
+      case SUBTRACAO:
+        printf("<SN, SUBTRACAO> ");
 
-estado = 11; // monta token constante inteira e retorna 
+        break;
 
-ungetc(c, fd); 
+      case MULTIPLIC:
+        printf("<SN, MULTIPLICACAO> ");
 
-t.cat = CT_I; 
+        break;
 
-t.valInt = atoi(digitos); 
+      case DIVISAO:
+        printf("<SN, DIVISAO> ");
 
-return t; 
+        break;
 
-} 
+      case ATRIB:
+        printf("<SN, ATRIBUICAO> ");
 
-} 
+        break;
 
- } 
+      case ABRE_PAR:
+        printf("<SN, ABRE_PARENTESES> ");
 
-} 
+        break;
 
- 
+      case FECHA_PAR:
+        printf("<SN, FECHA_PARENTESES> ");
 
-int main() { 
+        break;
+      }
 
- 
+      break;
 
- FILE *fd; 
+    case CT_I:
+      printf("<CT_I, %d> ", tk.valInt);
 
-TOKEN tk; 
+      break;
 
- 
+    case FIM_EXPR:
+      printf("<FIM_EXPR, %d>\n", 0);
 
-if ((fd=fopen("expressao.dat", "r")) == NULL) 
+      printf("LINHA %d: ", contLinha);
 
-error("Arquivo de entrada da expressao nao encontrado!"); 
+      break;
 
-	printf("LINHA %d: ", contLinha); 
+    case FIM_ARQ:
+      printf(" <Fim do arquivo encontrado>\n");
+    }
 
-while (1) {    // laço infinito para processar a expressão até o fim de arquivo 
+    if (tk.cat == FIM_ARQ)
+      break;
+  }
 
-tk = AnaLex(fd); 
+  fclose(fd);
 
-switch (tk.cat) { 
-
-case ID: printf("<ID, %s> ", tk.lexema); 
-
-break; 
-
-case SN: switch (tk.codigo) { 
-
-case ADICAO: printf("<SN, ADICAO> "); 
-
-break; 
-
-case SUBTRACAO: printf("<SN, SUBTRACAO> "); 
-
-break; 
-
-case MULTIPLIC: printf("<SN, MULTIPLICACAO> "); 
-
-break; 
-
-case DIVISAO: printf("<SN, DIVISAO> "); 
-
-break; 
-
-case ATRIB: printf("<SN, ATRIBUICAO> "); 
-
-break; 
-
-case ABRE_PAR: printf("<SN, ABRE_PARENTESES> "); 
-
-break; 
-
-case FECHA_PAR: printf("<SN, FECHA_PARENTESES> "); 
-
-break; 
-
-} 
-
-break; 
-
-case CT_I: printf("<CT_I, %d> ", tk.valInt); 
-
-break; 
-
-case FIM_EXPR: printf("<FIM_EXPR, %d>\n", 0); 
-
-printf("LINHA %d: ", contLinha); 
-
-break; 
-
-case FIM_ARQ: printf(" <Fim do arquivo encontrado>\n"); 
-
-} 
-
-if (tk.cat == FIM_ARQ) break; 
-
-} 
-
- 
-
-fclose(fd); 
-
-return 0; 
-
-} 
+  return 0;
+}
